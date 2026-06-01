@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RecruitIQ — AI Resume Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#2563EB;
+  --blue-dark:#1d4ed8;
+  --blue-light:#EFF6FF;
+  --ink:#0f172a;
+  --ink2:#1e293b;
+  --muted:#64748b;
+  --light:#94a3b8;
+  --border:#e2e8f0;
+  --surface:#f8fafc;
+  --white:#ffffff;
+  --green:#16a34a;
+  --green-bg:#f0fdf4;
+  --red:#dc2626;
+  --red-bg:#fef2f2;
+  --yellow:#d97706;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--white);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:64px;padding:0 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,0.95);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-icon{
+  width:32px;height:32px;background:var(--blue);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  color:white;font-size:16px;font-weight:700;
+}
+.nav-logo-text{font-size:16px;font-weight:700;color:var(--ink)}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nav-link{
+  padding:7px 14px;border-radius:8px;
+  font-size:14px;font-weight:500;color:var(--muted);
+  text-decoration:none;transition:all 0.15s;
+}
+.nav-link:hover{color:var(--ink);background:var(--surface)}
+.nav-cta{
+  display:flex;align-items:center;gap:8px;
+}
+.btn-outline{
+  padding:8px 18px;border-radius:8px;
+  font-size:14px;font-weight:500;color:var(--ink);
+  border:1px solid var(--border);background:white;
+  text-decoration:none;transition:all 0.15s;cursor:pointer;
+}
+.btn-outline:hover{border-color:var(--ink)}
+.btn-blue{
+  padding:8px 18px;border-radius:8px;
+  font-size:14px;font-weight:600;color:white;
+  background:var(--blue);border:none;
+  text-decoration:none;transition:all 0.15s;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+}
+.btn-blue:hover{background:var(--blue-dark)}
+
+/* HERO */
+.hero{
+  padding:128px 40px 80px;
+  max-width:1100px;margin:0 auto;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:80px;align-items:center;
+}
+.hero-left{}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--blue-light);border:1px solid #bfdbfe;
+  border-radius:100px;padding:5px 14px;
+  font-size:12px;font-weight:600;color:var(--blue);
+  margin-bottom:24px;
+}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--blue)}
+h1{
+  font-size:48px;font-weight:700;
+  line-height:1.1;letter-spacing:-0.03em;
+  color:var(--ink);margin-bottom:20px;
+}
+h1 span{color:var(--blue)}
+.hero-desc{
+  font-size:16px;font-weight:400;color:var(--muted);
+  line-height:1.7;margin-bottom:36px;max-width:440px;
+}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:40px}
+.btn-hero-primary{
+  padding:12px 24px;border-radius:10px;
+  font-size:14px;font-weight:600;color:white;
+  background:var(--blue);border:none;
+  text-decoration:none;cursor:pointer;
+  transition:all 0.15s;
+  display:flex;align-items:center;gap:8px;
+  box-shadow:0 2px 8px rgba(37,99,235,0.3);
+}
+.btn-hero-primary:hover{background:var(--blue-dark);transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,235,0.4)}
+.btn-hero-secondary{
+  padding:12px 24px;border-radius:10px;
+  font-size:14px;font-weight:500;color:var(--ink);
+  background:white;border:1px solid var(--border);
+  text-decoration:none;cursor:pointer;
+  transition:all 0.15s;
+}
+.btn-hero-secondary:hover{border-color:var(--ink)}
+.hero-stats{
+  display:flex;gap:28px;padding-top:28px;
+  border-top:1px solid var(--border);
+}
+.hero-stat-num{font-size:24px;font-weight:700;color:var(--ink);display:block}
+.hero-stat-label{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* HERO RIGHT — PREVIEW CARD */
+.hero-right{position:relative}
+.preview-card{
+  background:white;border:1px solid var(--border);
+  border-radius:16px;padding:24px;
+  box-shadow:0 4px 6px rgba(0,0,0,0.04),0 20px 60px rgba(0,0,0,0.08);
+}
+.preview-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;
+}
+.preview-title{font-size:13px;font-weight:600;color:var(--ink)}
+.preview-badge{
+  font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;
+  background:var(--green-bg);color:var(--green);
+}
+.preview-score-row{
+  display:flex;align-items:center;gap:16px;margin-bottom:20px;
+}
+.preview-score-circle{
+  width:72px;height:72px;position:relative;flex-shrink:0;
+}
+.preview-score-circle svg{transform:rotate(-90deg)}
+.preview-score-num{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:700;color:var(--blue);
+}
+.preview-score-info{}
+.preview-score-label{font-size:12px;color:var(--muted);margin-bottom:4px}
+.preview-score-verdict{font-size:14px;font-weight:600;color:var(--ink)}
+.preview-skills{margin-bottom:16px}
+.preview-skills-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:8px}
+.preview-skill{
+  display:inline-flex;align-items:center;gap-4px;
+  padding:3px 10px;border-radius:5px;
+  font-size:12px;font-weight:500;margin:2px;
+}
+.preview-skill.match{background:var(--green-bg);color:var(--green)}
+.preview-skill.gap{background:var(--red-bg);color:var(--red)}
+.preview-rec{
+  padding:12px 14px;border-radius:8px;
+  background:var(--blue-light);
+  font-size:12px;color:var(--blue);font-weight:500;
+  display:flex;align-items:center;gap-8px;
+}
+.preview-float{
+  position:absolute;
+  top:-16px;right:-16px;
+  background:white;border:1px solid var(--border);
+  border-radius:12px;padding:12px 16px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.1);
+  font-size:12px;
+}
+.preview-float-num{font-size:22px;font-weight:700;color:var(--blue);display:block}
+.preview-float-label{color:var(--muted);margin-top:2px}
+
+/* LOGOS STRIP */
+.logos-strip{
+  padding:40px;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  text-align:center;
+}
+.logos-strip p{font-size:12px;color:var(--light);text-transform:uppercase;letter-spacing:0.1em;font-weight:500;margin-bottom:20px}
+.logos-row{display:flex;justify-content:center;align-items:center;gap:48px;flex-wrap:wrap}
+.logo-item{font-size:14px;font-weight:700;color:var(--light);letter-spacing:-0.02em}
+
+/* FEATURES */
+.features-section{padding:80px 40px;max-width:1100px;margin:0 auto}
+.section-eyebrow{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--blue);margin-bottom:12px}
+.section-title{font-size:36px;font-weight:700;color:var(--ink);letter-spacing:-0.02em;margin-bottom:12px;line-height:1.2}
+.section-desc{font-size:15px;color:var(--muted);max-width:480px;margin-bottom:48px;line-height:1.6}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.feature-card{
+  padding:28px;border-radius:12px;
+  border:1px solid var(--border);background:white;
+  transition:all 0.2s;
+}
+.feature-card:hover{border-color:var(--blue);box-shadow:0 4px 24px rgba(37,99,235,0.08);transform:translateY(-2px)}
+.feature-icon{
+  width:40px;height:40px;border-radius:10px;
+  background:var(--blue-light);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;margin-bottom:16px;
+}
+.feature-title{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:8px}
+.feature-desc{font-size:13px;color:var(--muted);line-height:1.6;font-weight:400}
+
+/* HOW IT WORKS */
+.how-section{
+  padding:80px 40px;background:var(--surface);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.how-inner{max-width:900px;margin:0 auto}
+.steps-row{display:flex;gap:0;margin-top:48px;position:relative}
+.steps-row::before{
+  content:'';position:absolute;
+  top:20px;left:calc(16.5%);right:calc(16.5%);
+  height:1px;background:var(--border);
+}
+.step-item{flex:1;text-align:center;padding:0 20px}
+.step-circle{
+  width:40px;height:40px;border-radius:50%;
+  background:white;border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;color:var(--blue);
+  margin:0 auto 16px;position:relative;z-index:1;
+}
+.step-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.5}
+
+/* METRICS */
+.metrics-section{padding:80px 40px;max-width:1100px;margin:0 auto}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:48px}
+.metric-card{
+  padding:28px 24px;border-radius:12px;
+  border:1px solid var(--border);background:white;
+  box-shadow:0 1px 3px rgba(0,0,0,0.04);
+}
+.metric-num{font-size:36px;font-weight:700;color:var(--blue);letter-spacing:-0.02em;margin-bottom:6px}
+.metric-label{font-size:13px;color:var(--muted);line-height:1.4}
+
+/* CTA */
+.cta-section{
+  padding:80px 40px;
+  background:var(--ink);
+  text-align:center;
+}
+.cta-section h2{
+  font-size:36px;font-weight:700;color:white;
+  letter-spacing:-0.02em;margin-bottom:14px;
+}
+.cta-section p{font-size:15px;color:#94a3b8;margin-bottom:32px}
+.btn-cta{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:13px 28px;border-radius:10px;
+  font-size:14px;font-weight:600;
+  background:white;color:var(--ink);
+  text-decoration:none;transition:opacity 0.15s;
+}
+.btn-cta:hover{opacity:0.9}
+
+/* FOOTER */
+footer{
+  padding:28px 40px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:13px;color:var(--muted);flex-wrap:wrap;gap:12px;
+}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.hero-left>*{animation:fadeUp 0.5s ease both}
+.hero-left>*:nth-child(1){animation-delay:0s}
+.hero-left>*:nth-child(2){animation-delay:0.06s}
+.hero-left>*:nth-child(3){animation-delay:0.12s}
+.hero-left>*:nth-child(4){animation-delay:0.18s}
+.hero-left>*:nth-child(5){animation-delay:0.24s}
+
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;gap:40px;padding:100px 24px 60px}
+  .features-grid{grid-template-columns:1fr 1fr}
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  .steps-row::before{display:none}
+  nav{padding:0 24px}
+  .nav-links{display:none}
+}
+@media(max-width:600px){
+  .features-grid{grid-template-columns:1fr}
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  h1{font-size:34px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-icon">R</div>
+    <span class="nav-logo-text">RecruitIQ</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#how" class="nav-link">How it works</a>
+    <a href="#metrics" class="nav-link">Performance</a>
+  </div>
+  <div class="nav-cta">
+    <a href="/login" class="btn-outline">Sign in</a>
+    <a href="/login" class="btn-blue">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Get started free
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-badge"><div class="hero-badge-dot"></div> AI-powered · LLaMA-3.1 fine-tuned</div>
+    <h1>Screen resumes with <span>AI precision</span></h1>
+    <p class="hero-desc">Upload any resume and job description. Get an instant match score, skill gap analysis, and data-driven hiring recommendation in seconds.</p>
+    <div class="hero-btns">
+      <a href="/login" class="btn-hero-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="white" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="white" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="white" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="white" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </a>
+      <a href="#how" class="btn-hero-secondary">See how it works →</a>
+    </div>
+    <div class="hero-stats">
+      <div>
+        <span class="hero-stat-num">1,045</span>
+        <div class="hero-stat-label">Training pairs</div>
+      </div>
+      <div>
+        <span class="hero-stat-num">72%</span>
+        <div class="hero-stat-label">Recruiter agreement</div>
+      </div>
+      <div>
+        <span class="hero-stat-num">97%</span>
+        <div class="hero-stat-label">Time saved</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="preview-float">
+      <span class="preview-float-num">82</span>
+      <div class="preview-float-label">Match score</div>
+    </div>
+    <div class="preview-card">
+      <div class="preview-header">
+        <div class="preview-title">Senior Data Scientist · Resume Analysis</div>
+        <div class="preview-badge">Eligible</div>
+      </div>
+      <div class="preview-score-row">
+        <div class="preview-score-circle">
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle fill="none" stroke="#e2e8f0" stroke-width="5" cx="36" cy="36" r="29"/>
+            <circle fill="none" stroke="#2563EB" stroke-width="5" stroke-linecap="round"
+              cx="36" cy="36" r="29"
+              stroke-dasharray="182.21"
+              stroke-dashoffset="36.44"
+              style="transition:stroke-dashoffset 1s ease"/>
+          </svg>
+          <div class="preview-score-num">82</div>
+        </div>
+        <div class="preview-score-info">
+          <div class="preview-score-label">Overall match score</div>
+          <div class="preview-score-verdict">✓ Strong candidate</div>
+        </div>
+      </div>
+      <div class="preview-skills">
+        <div class="preview-skills-title">Matching skills</div>
+        <span class="preview-skill match">Python</span>
+        <span class="preview-skill match">Machine Learning</span>
+        <span class="preview-skill match">SQL</span>
+        <span class="preview-skill match">TensorFlow</span>
+      </div>
+      <div class="preview-skills">
+        <div class="preview-skills-title">Missing skills</div>
+        <span class="preview-skill gap">Kubernetes</span>
+        <span class="preview-skill gap">Spark</span>
+      </div>
+      <div class="preview-rec">🚀 &nbsp;Recommend for technical interview round</div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGOS -->
+<div class="logos-strip">
+  <p>Inspired by how top companies screen talent</p>
+  <div class="logos-row">
+    <span class="logo-item">LinkedIn</span>
+    <span class="logo-item">Workday</span>
+    <span class="logo-item">Greenhouse</span>
+    <span class="logo-item">Lever</span>
+    <span class="logo-item">Taleo</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="section-eyebrow">Features</div>
+  <div class="section-title">Built for smarter hiring</div>
+  <p class="section-desc">Everything you need to screen resumes faster, fairer, and more accurately than manual review.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Instant AI scoring</div>
+      <div class="feature-desc">Get a 0–100 match score for any resume against any job description in under 15 seconds.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <div class="feature-title">Skill gap analysis</div>
+      <div class="feature-desc">Identify exactly which required skills are present and which are missing — with resume evidence.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📦</div>
+      <div class="feature-title">Batch screening</div>
+      <div class="feature-desc">Upload 500 resumes at once and receive a ranked shortlist. Reduces screening time by 97%.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🕓</div>
+      <div class="feature-title">Screening history</div>
+      <div class="feature-desc">Every screening is saved to your account. Review and compare past candidates anytime.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <div class="feature-title">Custom thresholds</div>
+      <div class="feature-desc">Set your own eligibility cutoff. Adjust the minimum score required for each role.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <div class="feature-title">Secure & private</div>
+      <div class="feature-desc">Sign in with Google. No passwords stored. Resume data is private to your account.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="how-inner">
+    <div class="section-eyebrow">Process</div>
+    <div class="section-title">Three steps to a shortlist</div>
+    <div class="steps-row">
+      <div class="step-item">
+        <div class="step-circle">1</div>
+        <div class="step-title">Paste the JD</div>
+        <div class="step-desc">Copy any job description directly into the text field.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-circle">2</div>
+        <div class="step-title">Upload resume</div>
+        <div class="step-desc">Drop a PDF, DOCX, or TXT file — any format works.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-circle">3</div>
+        <div class="step-title">Get your score</div>
+        <div class="step-desc">Instant score, skill breakdown, and hiring recommendation.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- METRICS -->
+<section class="metrics-section" id="metrics">
+  <div class="section-eyebrow">Model performance</div>
+  <div class="section-title">Evaluated on real data</div>
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-num">72%</div>
+      <div class="metric-label">Agreement with human recruiter scores</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-num">0.836</div>
+      <div class="metric-label">Cohen's Kappa — strong agreement</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-num">33m</div>
+      <div class="metric-label">To screen 500 resumes end-to-end</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-num">97%</div>
+      <div class="metric-label">Reduction in initial screening time</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Start screening smarter today</h2>
+  <p>Free forever. No credit card required. Sign in with Google in seconds.</p>
+  <a href="/login" class="btn-cta">
+    <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    Get started with Google — it's free
+  </a>
+</section>
+
+<footer>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="nav-logo-icon" style="width:24px;height:24px;font-size:12px">R</div>
+    <span>RecruitIQ · Built by Sriramkumar · 2026</span>
+  </div>
+  <span>Powered by LLaMA-3.1 · LoRA fine-tuning · Hugging Face Spaces</span>
+</footer>
+
+</body>
+</html>
