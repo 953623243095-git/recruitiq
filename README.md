@@ -1,24 +1,12 @@
-\---
-
+---
 title: RecruitIQ
-
-emoji: 🚀
-
+emoji: "rocket"
 colorFrom: blue
-
 colorTo: green
-
 sdk: docker
-
 pinned: false
+---
 
-\---
-
-
-
-\# RecruitIQ
-
-
+# RecruitIQ
 
 AI-powered Resume Screener
-
