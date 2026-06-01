@@ -1,6 +1,13 @@
 flask
+flask-dance
+flask-login
+supabase
+groq
 pdfplumber
 python-docx
-groq
-gunicorn
+pytesseract
+pillow
+pdf2image
 python-dotenv
+gunicorn
+requests
