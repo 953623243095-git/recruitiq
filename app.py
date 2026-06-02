@@ -16,7 +16,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+if os.environ.get("HF_SPACE"):
+    os.environ.pop("OAUTHLIB_INSECURE_TRANSPORT", None)
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 # Tesseract path — Windows only, comment out on Linux/HuggingFace
