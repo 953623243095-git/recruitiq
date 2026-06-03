@@ -53,7 +53,7 @@ google_bp = make_google_blueprint(
     scope=["openid",
            "https://www.googleapis.com/auth/userinfo.email",
            "https://www.googleapis.com/auth/userinfo.profile"],
-    redirect_url="https://huggingface.co/spaces/Sriramkumarm95/recruitiq/login/google/authorized" if is_hf else "http://localhost:5000/login/google/authorized"
+    redirect_url="https://sriramkumarm95-recruitiq.hf.space/login/google/authorized" if is_hf else "http://localhost:5000/login/google/authorized"/google/authorized"
 )
 app.register_blueprint(google_bp, url_prefix="/login")
 
