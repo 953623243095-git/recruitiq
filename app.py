@@ -28,6 +28,9 @@ if os.name == 'nt':
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 app = Flask(__name__)
+# Fix redirect URL for Hugging Face reverse proxy
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get("SECRET_KEY", "recruitiq2026xyz")
 app.config['SESSION_COOKIE_NAME'] = 'recruitiq_session'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -41,13 +44,16 @@ supabase = create_client(
 # ===== GROQ =====
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# ===== GOOGLE OAUTH =====
+# Detect if running on Hugging Face
+is_hf = os.environ.get("SPACE_ID") is not None
+
 google_bp = make_google_blueprint(
     client_id=os.environ.get("GOOGLE_CLIENT_ID"),
     client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
     scope=["openid",
            "https://www.googleapis.com/auth/userinfo.email",
            "https://www.googleapis.com/auth/userinfo.profile"],
+    redirect_url="https://huggingface.co/spaces/Sriramkumarm95/recruitiq/login/google/authorized" if is_hf else "http://localhost:5000/login/google/authorized"
 )
 app.register_blueprint(google_bp, url_prefix="/login")
 
