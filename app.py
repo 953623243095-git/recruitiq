@@ -1,3 +1,7 @@
+import os
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_dance.contrib.google import make_google_blueprint, google
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
@@ -5,7 +9,6 @@ import pdfplumber
 import docx
 import json
 import io
-import os
 import re
 import pytesseract
 from PIL import Image
