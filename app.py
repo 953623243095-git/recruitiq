@@ -45,7 +45,14 @@ supabase = create_client(
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 # Detect if running on Hugging Face
+# Detect if running on Hugging Face
 is_hf = os.environ.get("SPACE_ID") is not None
+
+redirect_uri = (
+    "https://sriramkumarm95-recruitiq.hf.space/login/google/authorized"
+    if is_hf else
+    "http://localhost:5000/login/google/authorized"
+)
 
 google_bp = make_google_blueprint(
     client_id=os.environ.get("GOOGLE_CLIENT_ID"),
@@ -53,7 +60,7 @@ google_bp = make_google_blueprint(
     scope=["openid",
            "https://www.googleapis.com/auth/userinfo.email",
            "https://www.googleapis.com/auth/userinfo.profile"],
-    redirect_url="https://sriramkumarm95-recruitiq.hf.space/login/google/authorized" if is_hf else "http://localhost:5000/login/google/authorized"/google/authorized"
+    redirect_url=redirect_uri
 )
 app.register_blueprint(google_bp, url_prefix="/login")
 
