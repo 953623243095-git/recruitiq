@@ -29,7 +29,7 @@ app.secret_key = os.environ.get("SECRET_KEY") or "recruitiq2026supersecretkey"
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.config['SESSION_COOKIE_NAME'] = 'recruitiq_session'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # ===== SUPABASE =====
@@ -41,8 +41,7 @@ supabase = create_client(
 # ===== GROQ =====
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# Detect if running on Hugging Face
-# Detect if running on Hugging Face
+# ===== GOOGLE OAUTH =====
 is_hf = os.environ.get("SPACE_ID") is not None
 
 redirect_uri = (
@@ -63,7 +62,10 @@ app.register_blueprint(google_bp, url_prefix="/login")
 
 # ===== LOGIN MANAGER =====
 login_manager = LoginManager(app)
-login_manager.login_view = "login_page"
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    return redirect(url_for('login_page'))
 
 class User(UserMixin):
     def __init__(self, id, name, email):
@@ -86,10 +88,8 @@ def load_user(user_id):
 def extract_text(file):
     filename = file.filename.lower()
     content = file.read()
-    is_scanned = False
 
     if filename.endswith('.pdf'):
-        # Try normal extraction first
         try:
             with pdfplumber.open(io.BytesIO(content)) as pdf:
                 text = ' '.join(page.extract_text() or '' for page in pdf.pages)
@@ -97,14 +97,11 @@ def extract_text(file):
                 return text.strip(), False
         except:
             pass
-
-        # Scanned PDF — use OCR
         try:
             images = convert_from_bytes(content, dpi=200)
             text = ''
             for img in images:
                 text += pytesseract.image_to_string(img) + ' '
-            is_scanned = True
             return text.strip(), True
         except Exception as e:
             print(f"OCR error: {e}")
@@ -119,39 +116,10 @@ def extract_text(file):
 
     return "", False
 
-# ===== EXPERIENCE YEARS CHECKER =====
-def extract_experience_years(resume_text):
-    """Extract total years of experience from resume text."""
-    patterns = [
-        r'(\d+)\+?\s*years?\s*of\s*experience',
-        r'(\d+)\+?\s*years?\s*experience',
-        r'experience\s*of\s*(\d+)\+?\s*years?',
-        r'(\d{4})\s*[-–]\s*(\d{4}|present|current)',
-    ]
-    years = []
-    for pattern in patterns:
-        matches = re.findall(pattern, resume_text.lower())
-        for match in matches:
-            if isinstance(match, tuple):
-                try:
-                    start = int(match[0])
-                    end = 2026 if match[1] in ['present', 'current'] else int(match[1])
-                    if 1990 <= start <= 2026:
-                        years.append(end - start)
-                except:
-                    pass
-            else:
-                try:
-                    years.append(int(match))
-                except:
-                    pass
-    return max(years) if years else 0
-
+# ===== EXPERIENCE CHECKER =====
 def check_experience_requirement(jd_text, resume_text):
-    """Check if candidate meets experience requirement from JD."""
     jd_lower = jd_text.lower()
     required_years = 0
-
     patterns = [
         r'(\d+)\+?\s*years?\s*(?:of\s*)?(?:experience|exp)',
         r'minimum\s*(\d+)\s*years?',
@@ -163,7 +131,30 @@ def check_experience_requirement(jd_text, resume_text):
             required_years = int(match.group(1))
             break
 
-    candidate_years = extract_experience_years(resume_text)
+    candidate_years = 0
+    exp_patterns = [
+        r'(\d+)\+?\s*years?\s*of\s*experience',
+        r'(\d+)\+?\s*years?\s*experience',
+        r'(\d{4})\s*[-–]\s*(\d{4}|present|current)',
+    ]
+    years = []
+    for pattern in exp_patterns:
+        matches = re.findall(pattern, resume_text.lower())
+        for match in matches:
+            if isinstance(match, tuple):
+                try:
+                    start = int(match[0])
+                    end = 2026 if match[1] in ['present','current'] else int(match[1])
+                    if 1990 <= start <= 2026:
+                        years.append(end - start)
+                except:
+                    pass
+            else:
+                try:
+                    years.append(int(match))
+                except:
+                    pass
+    candidate_years = max(years) if years else 0
 
     return {
         "required_years": required_years,
@@ -172,18 +163,16 @@ def check_experience_requirement(jd_text, resume_text):
         "gap_years": max(0, required_years - candidate_years)
     }
 
-# ===== MAIN SCORER =====
+# ===== SCORER =====
 def score_resume_text(resume_text, jd_text):
     prompt = f"""You are an expert recruiter with 10 years experience.
 Score this resume against the job description on a scale of 0-100.
-Return ONLY valid JSON — no extra text outside JSON.
+Return ONLY valid JSON — no extra text.
 
 STRICT RULES:
 - Only mention skills EXPLICITLY written in the resume
-- Do not assume or infer skills not mentioned
 - key_matches must only contain skills found word-for-word in resume
 - key_gaps must only contain skills from JD missing in resume
-- If resume is empty or unreadable score 0
 
 JOB DESCRIPTION:
 {jd_text[:1000]}
@@ -195,7 +184,7 @@ Return exactly this JSON:
 {{
   "score": <integer 0-100>,
   "confidence": <integer 0-100>,
-  "reasoning": "<2 sentences explaining the score>",
+  "reasoning": "<2 sentences>",
   "key_matches": ["skill1", "skill2", "skill3"],
   "key_gaps": ["gap1", "gap2", "gap3"]
 }}"""
@@ -207,21 +196,17 @@ Return exactly this JSON:
         temperature=0,
         seed=42
     )
-
     raw = response.choices[0].message.content.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
     result = json.loads(raw)
 
-    # Hallucination check
     confidence = result.get('confidence', 100)
     if confidence < 40:
         result['warning'] = 'Low confidence — resume may be unreadable or too short'
         result['score'] = min(result['score'], 30)
 
-    # Sanity check score
     result['score'] = max(0, min(100, int(result.get('score', 0))))
 
-    # Verify matches actually exist in resume
     verified_matches = []
     resume_lower = resume_text.lower()
     for skill in result.get('key_matches', []):
@@ -233,32 +218,29 @@ Return exactly this JSON:
 
 # ===== IMPROVEMENT RECOMMENDATIONS =====
 def generate_improvements(resume_text, jd_text, key_gaps, score):
-    """Generate personalized improvement roadmap for rejected candidates."""
     prompt = f"""You are a career coach helping a rejected job candidate improve.
-
-The candidate scored {score}/100 for this job.
-Missing skills: {', '.join(key_gaps[:5]) if key_gaps else 'general skills'}
+The candidate scored {score}/100. Missing skills: {', '.join(key_gaps[:5])}
 
 JOB DESCRIPTION:
 {jd_text[:600]}
 
-CANDIDATE RESUME SUMMARY:
+RESUME:
 {resume_text[:600]}
 
-Generate a personalized improvement plan. Return ONLY valid JSON:
+Return ONLY valid JSON:
 {{
   "summary": "<1 sentence overall advice>",
   "improvements": [
     {{
       "skill": "<skill name>",
-      "why_needed": "<1 sentence why this skill matters for the role>",
+      "why_needed": "<1 sentence>",
       "how_to_learn": "<specific course or resource>",
-      "time_estimate": "<e.g. 2 weeks, 1 month>",
+      "time_estimate": "<e.g. 2 weeks>",
       "priority": "<High/Medium/Low>"
     }}
   ],
   "reapply_timeline": "<e.g. 2-3 months>",
-  "reapply_score_estimate": <estimated score after improvements as integer>
+  "reapply_score_estimate": <integer>
 }}"""
 
     response = groq_client.chat.completions.create(
@@ -268,7 +250,6 @@ Generate a personalized improvement plan. Return ONLY valid JSON:
         temperature=0,
         seed=42
     )
-
     raw = response.choices[0].message.content.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
     return json.loads(raw)
@@ -278,29 +259,6 @@ Generate a personalized improvement plan. Return ONLY valid JSON:
 def home():
     if current_user.is_authenticated:
         return render_template('index.html', user=current_user)
-    if google.authorized:
-        try:
-            resp = google.get("/oauth2/v2/userinfo")
-            if resp.ok:
-                info = resp.json()
-                google_id = info['id']
-                name = info.get('name', '')
-                email = info.get('email', '')
-                result = supabase.table("users").select("*").eq("google_id", google_id).execute()
-                if result.data:
-                    user_data = result.data[0]
-                else:
-                    new_user = supabase.table("users").insert({
-                        "google_id": google_id,
-                        "name": name,
-                        "email": email
-                    }).execute()
-                    user_data = new_user.data[0]
-                user = User(user_data['id'], user_data['name'], user_data['email'])
-                login_user(user)
-                return render_template('index.html', user=user)
-        except Exception as e:
-            print("Auth error:", e)
     return render_template('landing.html')
 
 @app.route('/login')
@@ -308,6 +266,37 @@ def login_page():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     return redirect(url_for('google.login'))
+
+@app.route('/login/google/authorized')
+def google_authorized():
+    if not google.authorized:
+        return redirect(url_for('login_page'))
+    try:
+        resp = google.get("/oauth2/v2/userinfo")
+        if not resp.ok:
+            return redirect(url_for('login_page'))
+        info = resp.json()
+        google_id = info['id']
+        name = info.get('name', '')
+        email = info.get('email', '')
+
+        result = supabase.table("users").select("*").eq("google_id", google_id).execute()
+        if result.data:
+            user_data = result.data[0]
+        else:
+            new_user = supabase.table("users").insert({
+                "google_id": google_id,
+                "name": name,
+                "email": email
+            }).execute()
+            user_data = new_user.data[0]
+
+        user = User(user_data['id'], user_data['name'], user_data['email'])
+        login_user(user)
+        return redirect(url_for('home'))
+    except Exception as e:
+        print("Auth error:", e)
+        return redirect(url_for('home'))
 
 @app.route('/logout')
 def logout():
@@ -324,21 +313,15 @@ def score():
         if not jd or not resume_file:
             return jsonify({'error': 'Missing JD or resume file'})
 
-        # Extract text with OCR support
         resume_text, is_scanned = extract_text(resume_file)
-
         if not resume_text.strip():
             return jsonify({'error': 'Could not extract text from file'})
 
-        # Score resume
         result = score_resume_text(resume_text, jd)
-
-        # Experience check
         exp_check = check_experience_requirement(jd, resume_text)
         result['experience_check'] = exp_check
         result['is_scanned'] = is_scanned
 
-        # Generate improvements if score is low
         threshold = int(request.form.get('threshold', 50))
         if result['score'] < threshold and result.get('key_gaps'):
             try:
@@ -349,10 +332,9 @@ def score():
                 )
                 result['improvements'] = improvements
             except Exception as e:
-                print(f"Improvement generation error: {e}")
+                print(f"Improvement error: {e}")
                 result['improvements'] = None
 
-        # Save to Supabase
         if current_user.is_authenticated:
             try:
                 supabase.table("screenings").insert({
@@ -365,7 +347,7 @@ def score():
                     "key_gaps": result.get('key_gaps', [])
                 }).execute()
             except Exception as e:
-                print(f"DB save error: {e}")
+                print(f"DB error: {e}")
 
         return jsonify(result)
 
