@@ -60,6 +60,38 @@ google_bp = make_google_blueprint(
     redirect_url=redirect_uri
 )
 app.register_blueprint(google_bp, url_prefix="/login")
+from flask_dance.consumer import oauth_authorized
+from flask import flash
+
+@oauth_authorized.connect_via(google_bp)
+def google_logged_in(blueprint, token):
+    if not token:
+        return False
+    try:
+        resp = blueprint.session.get("/oauth2/v2/userinfo")
+        if not resp.ok:
+            return False
+        info = resp.json()
+        google_id = info["id"]
+        name = info.get("name", "")
+        email = info.get("email", "")
+
+        result = supabase.table("users").select("*").eq("google_id", google_id).execute()
+        if result.data:
+            user_data = result.data[0]
+        else:
+            new_user = supabase.table("users").insert({
+                "google_id": google_id,
+                "name": name,
+                "email": email
+            }).execute()
+            user_data = new_user.data[0]
+
+        user = User(user_data['id'], user_data['name'], user_data['email'])
+        login_user(user)
+    except Exception as e:
+        print("OAuth error:", e)
+    return False
 
 # ===== LOGIN MANAGER =====
 login_manager = LoginManager(app)
@@ -260,32 +292,6 @@ Return ONLY valid JSON:
 def home():
     if current_user.is_authenticated:
         return render_template('index.html', user=current_user)
-    
-    # Handle Google OAuth callback
-    if google.authorized:
-        try:
-            resp = google.get("/oauth2/v2/userinfo")
-            if resp.ok:
-                info = resp.json()
-                google_id = info['id']
-                name = info.get('name', '')
-                email = info.get('email', '')
-                result = supabase.table("users").select("*").eq("google_id", google_id).execute()
-                if result.data:
-                    user_data = result.data[0]
-                else:
-                    new_user = supabase.table("users").insert({
-                        "google_id": google_id,
-                        "name": name,
-                        "email": email
-                    }).execute()
-                    user_data = new_user.data[0]
-                user = User(user_data['id'], user_data['name'], user_data['email'])
-                login_user(user)
-                return render_template('index.html', user=user)
-        except Exception as e:
-            print("Auth error:", e)
-    
     return render_template('landing.html')
 
 @app.route('/login')
