@@ -1,8 +1,9 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     poppler-utils \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -16,4 +17,4 @@ EXPOSE 7860
 
 ENV PORT=7860
 
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:7860"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:7860", "--timeout", "120"]
