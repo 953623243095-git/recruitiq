@@ -4,6 +4,7 @@ os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_dance.contrib.google import make_google_blueprint, google
+from flask_dance.consumer import oauth_authorized
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 import pdfplumber
@@ -34,6 +35,8 @@ app.config['SESSION_COOKIE_NAME'] = 'recruitiq_session'
 app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_hf else 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = True if is_hf else False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SECURE'] = True if is_hf else False
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'None' if is_hf else 'Lax'
 
 # ===== SUPABASE =====
 supabase = create_client(
@@ -45,25 +48,43 @@ supabase = create_client(
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 # ===== GOOGLE OAUTH =====
-redirect_uri = (
-    "https://sriramkumarm95-recruitiq.hf.space/login/google/authorized"
-    if is_hf else
-    "http://localhost:5000/login/google/authorized"
-)
-
 google_bp = make_google_blueprint(
     client_id=os.environ.get("GOOGLE_CLIENT_ID"),
     client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
-    scope=["openid",
-           "https://www.googleapis.com/auth/userinfo.email",
-           "https://www.googleapis.com/auth/userinfo.profile"],
+    scope=[
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile"
+    ],
     redirect_to="home"
 )
-)
 app.register_blueprint(google_bp, url_prefix="/login")
-from flask_dance.consumer import oauth_authorized
-from flask import flash
 
+# ===== LOGIN MANAGER =====
+login_manager = LoginManager(app)
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    return redirect(url_for('login_page'))
+
+class User(UserMixin):
+    def __init__(self, id, name, email):
+        self.id = id
+        self.name = name
+        self.email = email
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        result = supabase.table("users").select("*").eq("id", user_id).execute()
+        if result.data:
+            u = result.data[0]
+            return User(u['id'], u['name'], u['email'])
+    except:
+        pass
+    return None
+
+# ===== OAUTH SIGNAL =====
 @oauth_authorized.connect_via(google_bp)
 def google_logged_in(blueprint, token):
     if not token:
@@ -90,34 +111,9 @@ def google_logged_in(blueprint, token):
 
         user = User(user_data['id'], user_data['name'], user_data['email'])
         login_user(user)
-        return False  # False = don't store token in session
     except Exception as e:
         print("OAuth error:", e)
-        return False
-
-# ===== LOGIN MANAGER =====
-login_manager = LoginManager(app)
-
-@login_manager.unauthorized_handler
-def unauthorized():
-    return redirect(url_for('login_page'))
-
-class User(UserMixin):
-    def __init__(self, id, name, email):
-        self.id = id
-        self.name = name
-        self.email = email
-
-@login_manager.user_loader
-def load_user(user_id):
-    try:
-        result = supabase.table("users").select("*").eq("id", user_id).execute()
-        if result.data:
-            u = result.data[0]
-            return User(u['id'], u['name'], u['email'])
-    except:
-        pass
-    return None
+    return False
 
 # ===== FILE PARSER WITH OCR =====
 def extract_text(file):
@@ -166,20 +162,19 @@ def check_experience_requirement(jd_text, resume_text):
             required_years = int(match.group(1))
             break
 
-    candidate_years = 0
+    years = []
     exp_patterns = [
         r'(\d+)\+?\s*years?\s*of\s*experience',
         r'(\d+)\+?\s*years?\s*experience',
-        r'(\d{4})\s*[-–]\s*(\d{4}|present|current)',
+        r'(\d{4})\s*[-]\s*(\d{4}|present|current)',
     ]
-    years = []
     for pattern in exp_patterns:
         matches = re.findall(pattern, resume_text.lower())
         for match in matches:
             if isinstance(match, tuple):
                 try:
                     start = int(match[0])
-                    end = 2026 if match[1] in ['present','current'] else int(match[1])
+                    end = 2026 if match[1] in ['present', 'current'] else int(match[1])
                     if 1990 <= start <= 2026:
                         years.append(end - start)
                 except:
@@ -237,7 +232,7 @@ Return exactly this JSON:
 
     confidence = result.get('confidence', 100)
     if confidence < 40:
-        result['warning'] = 'Low confidence — resume may be unreadable or too short'
+        result['warning'] = 'Low confidence — resume may be unreadable'
         result['score'] = min(result['score'], 30)
 
     result['score'] = max(0, min(100, int(result.get('score', 0))))
@@ -253,7 +248,7 @@ Return exactly this JSON:
 
 # ===== IMPROVEMENT RECOMMENDATIONS =====
 def generate_improvements(resume_text, jd_text, key_gaps, score):
-    prompt = f"""You are a career coach helping a rejected job candidate improve.
+    prompt = f"""You are a career coach helping a rejected candidate improve.
 The candidate scored {score}/100. Missing skills: {', '.join(key_gaps[:5])}
 
 JOB DESCRIPTION:
@@ -301,7 +296,6 @@ def login_page():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     return redirect(url_for('google.login'))
-
 
 @app.route('/logout')
 def logout():
