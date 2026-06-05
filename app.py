@@ -5,6 +5,7 @@ os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_dance.contrib.google import make_google_blueprint, google
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
+from werkzeug.middleware.proxy_fix import ProxyFix
 import pdfplumber
 import docx
 import json
@@ -19,18 +20,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-if os.environ.get("HF_SPACE"):
-    os.environ.pop("OAUTHLIB_INSECURE_TRANSPORT", None)
-os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
-
-# Tesseract path — Windows only, comment out on Linux/HuggingFace
+# Tesseract path — Windows only
 if os.name == 'nt':
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 app = Flask(__name__)
-# Fix redirect URL for Hugging Face reverse proxy
-from werkzeug.middleware.proxy_fix import ProxyFix
+app.secret_key = os.environ.get("SECRET_KEY") or "recruitiq2026supersecretkey"
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+app.config['SESSION_COOKIE_NAME'] = 'recruitiq_session'
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
