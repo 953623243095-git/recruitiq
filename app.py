@@ -28,9 +28,11 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY") or "recruitiq2026supersecretkey"
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.config['SESSION_COOKIE_NAME'] = 'recruitiq_session'
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_hf else 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True if is_hf else False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SECURE'] = True if is_hf else False
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'None' if is_hf else 'Lax'
 
 # ===== SUPABASE =====
 supabase = create_client(
@@ -42,7 +44,18 @@ supabase = create_client(
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 # ===== GOOGLE OAUTH =====
+# Detect Hugging Face environment
 is_hf = os.environ.get("SPACE_ID") is not None
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY") or "recruitiq2026supersecretkey"
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+app.config['SESSION_COOKIE_NAME'] = 'recruitiq_session'
+app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_hf else 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True if is_hf else False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SECURE'] = True if is_hf else False
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'None' if is_hf else 'Lax'
 
 redirect_uri = (
     "https://sriramkumarm95-recruitiq.hf.space/login/google/authorized"
