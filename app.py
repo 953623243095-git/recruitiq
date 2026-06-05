@@ -57,7 +57,8 @@ google_bp = make_google_blueprint(
     scope=["openid",
            "https://www.googleapis.com/auth/userinfo.email",
            "https://www.googleapis.com/auth/userinfo.profile"],
-    redirect_url=redirect_uri
+    redirect_to="home"
+)
 )
 app.register_blueprint(google_bp, url_prefix="/login")
 from flask_dance.consumer import oauth_authorized
@@ -89,9 +90,10 @@ def google_logged_in(blueprint, token):
 
         user = User(user_data['id'], user_data['name'], user_data['email'])
         login_user(user)
+        return False  # False = don't store token in session
     except Exception as e:
         print("OAuth error:", e)
-    return False
+        return False
 
 # ===== LOGIN MANAGER =====
 login_manager = LoginManager(app)
