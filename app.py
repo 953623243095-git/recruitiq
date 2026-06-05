@@ -30,10 +30,9 @@ if os.name == 'nt':
 app = Flask(__name__)
 # Fix redirect URL for Hugging Face reverse proxy
 from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-app.secret_key = os.environ.get("SECRET_KEY", "recruitiq2026xyz")
-app.config['SESSION_COOKIE_NAME'] = 'recruitiq_session'
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # ===== SUPABASE =====
 supabase = create_client(
@@ -279,6 +278,8 @@ Generate a personalized improvement plan. Return ONLY valid JSON:
 # ===== ROUTES =====
 @app.route('/')
 def home():
+    if current_user.is_authenticated:
+        return render_template('index.html', user=current_user)
     if google.authorized:
         try:
             resp = google.get("/oauth2/v2/userinfo")
@@ -287,7 +288,6 @@ def home():
                 google_id = info['id']
                 name = info.get('name', '')
                 email = info.get('email', '')
-
                 result = supabase.table("users").select("*").eq("google_id", google_id).execute()
                 if result.data:
                     user_data = result.data[0]
@@ -298,7 +298,6 @@ def home():
                         "email": email
                     }).execute()
                     user_data = new_user.data[0]
-
                 user = User(user_data['id'], user_data['name'], user_data['email'])
                 login_user(user)
                 return render_template('index.html', user=user)
