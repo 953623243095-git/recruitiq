@@ -56,7 +56,6 @@ google_bp = make_google_blueprint(
     scope=["openid",
            "https://www.googleapis.com/auth/userinfo.email",
            "https://www.googleapis.com/auth/userinfo.profile"],
-    redirect_url=redirect_uri
 )
 app.register_blueprint(google_bp, url_prefix="/login")
 
@@ -259,6 +258,32 @@ Return ONLY valid JSON:
 def home():
     if current_user.is_authenticated:
         return render_template('index.html', user=current_user)
+    
+    # Handle Google OAuth callback
+    if google.authorized:
+        try:
+            resp = google.get("/oauth2/v2/userinfo")
+            if resp.ok:
+                info = resp.json()
+                google_id = info['id']
+                name = info.get('name', '')
+                email = info.get('email', '')
+                result = supabase.table("users").select("*").eq("google_id", google_id).execute()
+                if result.data:
+                    user_data = result.data[0]
+                else:
+                    new_user = supabase.table("users").insert({
+                        "google_id": google_id,
+                        "name": name,
+                        "email": email
+                    }).execute()
+                    user_data = new_user.data[0]
+                user = User(user_data['id'], user_data['name'], user_data['email'])
+                login_user(user)
+                return render_template('index.html', user=user)
+        except Exception as e:
+            print("Auth error:", e)
+    
     return render_template('landing.html')
 
 @app.route('/login')
@@ -267,36 +292,6 @@ def login_page():
         return redirect(url_for('home'))
     return redirect(url_for('google.login'))
 
-@app.route('/login/google/authorized')
-def google_authorized():
-    if not google.authorized:
-        return redirect(url_for('login_page'))
-    try:
-        resp = google.get("/oauth2/v2/userinfo")
-        if not resp.ok:
-            return redirect(url_for('login_page'))
-        info = resp.json()
-        google_id = info['id']
-        name = info.get('name', '')
-        email = info.get('email', '')
-
-        result = supabase.table("users").select("*").eq("google_id", google_id).execute()
-        if result.data:
-            user_data = result.data[0]
-        else:
-            new_user = supabase.table("users").insert({
-                "google_id": google_id,
-                "name": name,
-                "email": email
-            }).execute()
-            user_data = new_user.data[0]
-
-        user = User(user_data['id'], user_data['name'], user_data['email'])
-        login_user(user)
-        return redirect(url_for('home'))
-    except Exception as e:
-        print("Auth error:", e)
-        return redirect(url_for('home'))
 
 @app.route('/logout')
 def logout():
